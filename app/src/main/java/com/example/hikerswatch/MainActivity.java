@@ -30,15 +30,6 @@ public class MainActivity extends AppCompatActivity {
     LocationManager locationManager;
     LocationListener locationListener;
 
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-        }
-    }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,51 +44,7 @@ public class MainActivity extends AppCompatActivity {
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(@NonNull Location location) {
-                Log.i("Location",location.toString());
-
-                Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-
-                try {
-                    List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(),location.getLongitude(),1);
-
-                    if(listAddresses != null && listAddresses.size() > 0 ){
-
-                        activityMainBinding.txvLatitude.setText("Latitude: "+Double.toString(listAddresses.get(0).getLatitude()));
-                        activityMainBinding.txvLongitude.setText("Longitude: "+Double.toString(listAddresses.get(0).getLongitude()));
-                        activityMainBinding.txvAccuracy.setText("Accuracy: "+Double.toString(location.getAccuracy()));
-                        activityMainBinding.txvAltitude.setText("Altitude: "+Double.toString(location.getAltitude()));
-
-                        String address = "";
-
-                        //Street name
-                        if(listAddresses.get(0).getThoroughfare() != null){
-                            address += listAddresses.get(0).getThoroughfare() + "\n";
-                        }
-
-                        //City
-                        if(listAddresses.get(0).getLocality() != null){
-                            address += listAddresses.get(0).getLocality() + ", ";
-                        }
-
-                        //State
-                        if(listAddresses.get(0).getAdminArea() != null){
-                            address += listAddresses.get(0).getAdminArea() + ", ";
-                        }
-
-                        //Zipcode
-                        if(listAddresses.get(0).getPostalCode() != null){
-                            address += listAddresses.get(0).getPostalCode() + " ";
-                        }
-
-                        activityMainBinding.txvAddress.setText("Address:\n"+address);
-
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-
+                updateLocationInfo(location);
             }
         };
 
@@ -105,10 +52,76 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }else{
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if(lastKnownLocation != null){
+                updateLocationInfo(lastKnownLocation);
+            }
         }
 
     }
 
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            startListening();
+        }
+    }
+
+    private void startListening() {
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+    }
+
+    private void updateLocationInfo(Location lastKnownLocation) {
+
+        activityMainBinding.txvLatitude.setText("Latitude: "+Double.toString(lastKnownLocation.getLatitude()));
+        activityMainBinding.txvLongitude.setText("Longitude: "+Double.toString(lastKnownLocation.getLongitude()));
+        activityMainBinding.txvAccuracy.setText("Accuracy: "+Double.toString(lastKnownLocation.getAccuracy()));
+        activityMainBinding.txvAltitude.setText("Altitude: "+Double.toString(lastKnownLocation.getAltitude()));
+
+
+        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+
+        String address = "Could not find location :(";
+
+        try {
+            List<Address> listAddresses = geocoder.getFromLocation(lastKnownLocation.getLatitude(),lastKnownLocation.getLongitude(),1);
+
+            if(listAddresses != null && listAddresses.size() > 0 ){
+                address = "Address:\n";
+                Log.i("geocode",listAddresses.get(0).toString());
+                //Street name
+                if(listAddresses.get(0).getThoroughfare() != null){
+                    address += listAddresses.get(0).getThoroughfare() + "\n";
+                }
+
+                //City
+                if(listAddresses.get(0).getLocality() != null){
+                    address += listAddresses.get(0).getLocality() + ", ";
+                }
+
+                //State
+                if(listAddresses.get(0).getAdminArea() != null){
+                    address += listAddresses.get(0).getAdminArea() + ", ";
+                }
+
+                //Zipcode
+                if(listAddresses.get(0).getPostalCode() != null){
+                    address += listAddresses.get(0).getPostalCode();
+                }
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        activityMainBinding.txvAddress.setText(address);
+
+
+    }
 
 
 }
